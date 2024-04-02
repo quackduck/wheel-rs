@@ -1,4 +1,4 @@
-use rand_distr::{Distribution, Normal};
+use rand_distr::{num_traits::Float, Distribution, Normal};
 
 #[derive(Debug)]
 #[derive(Clone)]
@@ -85,7 +85,7 @@ impl Layer {
 #[derive(Clone)]
 pub struct Network {
     layers: Vec<Layer>,
-    cost: f64,
+    // cost: f64,
 }
 
 pub fn new_network(sizes: Vec<usize>) -> Network {
@@ -96,7 +96,7 @@ pub fn new_network(sizes: Vec<usize>) -> Network {
     }
     Network {
         layers,
-        cost: 0.0,
+        // cost: 0.0,
     }
 }
 
@@ -111,24 +111,24 @@ impl Network {
     }
 
     pub fn backward(&mut self, wanted: Vec<f64>) {
-        self.cost = 0.0;
+        // self.cost = 0.0;
         // let mut idx = self.layers.len() - 1;
 
         // dbg!(&self.layers);
 
         let (mut last_layer, mut rest) = self.layers.split_last_mut().unwrap();
-        last_layer.activations.iter().zip(wanted.iter()).for_each(|(a, w)| {
-            self.cost += cost(a-w);
-        });
+        // last_layer.activations.iter().zip(wanted.iter()).for_each(|(a, w)| {
+        //     self.cost += cost(a-w);
+        // });
 
-        let rate = 0.001 * 20.0;
+        let rate = 0.001;
 
         let mut deltas = vec![0.0; last_layer.weights.len()];
         for i in 0..last_layer.activations.len() {
             deltas[i] = 2.0 * cost_prime(last_layer.activations[i] - wanted[i]) * activate_prime(last_layer.zs[i]);
         }
         let second_last_activs = rest.last_mut().unwrap().activations.clone();
-        update_layer_with_deltas(&mut last_layer, &second_last_activs, &deltas, &rate);
+        update_layer_with_deltas(&mut last_layer, &second_last_activs, &deltas, rate);
 
         for i in (1..rest.len()).rev() { // we already handled the last one, and no need to update the input layer
             
@@ -138,43 +138,44 @@ impl Network {
                 let mut sum = 0.0;
                 for k in 0..self.layers[i + 1].weights.len() {
                     sum += self.layers[i + 1].weights[k][j] * deltas[k];
+                    // sum = self.layers[i + 1].weights[k][j].mul_add( deltas[k], sum);
                 }
                 next_deltas[j] = sum * activate_prime(layer.zs[j]);
             }
             let prev_activs = self.layers[i - 1].activations.clone();
             // dbg!(i);
-            update_layer_with_deltas(&mut self.layers[i], &prev_activs, &next_deltas, &rate);
+            update_layer_with_deltas(&mut self.layers[i], &prev_activs, &next_deltas, rate);
             deltas = next_deltas;
         }
     }
 }
 
-// sum1d adds two 1d vecs together and stores the result in the first vec
-fn sum1d(a: &mut Vec<f64>, b: &Vec<f64>) {
-    a.iter_mut().zip(b.iter()).for_each(|(ai, bi)| *ai += bi);
-}
+// // sum1d adds two 1d vecs together and stores the result in the first vec
+// fn sum1d(a: &mut Vec<f64>, b: Vec<f64>) {
+//     a.iter_mut().zip(b.iter()).for_each(|(ai, bi)| *ai += bi);
+// }
 
-fn scalar_mul(a: &mut Vec<f64>, b: &f64) {
-    a.iter_mut().for_each(|ai| *ai *= b);
-}
+// fn scalar_mul(a: &mut Vec<f64>, b: f64) {
+//     a.iter_mut().for_each(|ai| *ai *= b);
+// }
 
-fn err_to_delcdelw(delta: &f64, prevactiv: &f64) -> f64 {
+fn err_to_delcdelw(delta: f64, prevactiv: f64) -> f64 {
     delta * prevactiv
 }
 
-fn err_to_delcdelb(delta: &f64) -> f64 {
-    *delta
+fn err_to_delcdelb(delta: f64) -> f64 {
+    delta
 }
 
-fn update_layer_with_deltas(layer: &mut Layer, prev_activations: &Vec<f64>, deltas: &Vec<f64>, learning_rate: &f64) {
+fn update_layer_with_deltas(layer: &mut Layer, prev_activations: &Vec<f64>, deltas: &Vec<f64>, learning_rate: f64) {
     for i in 0..layer.weights.len() { // for every neuron
         for j in 0..layer.weights[i].len() { // for every weight in the neuron
-            layer.weights[i][j] -= learning_rate * err_to_delcdelw(&deltas[i], &prev_activations[j]);
+            layer.weights[i][j] -= learning_rate * err_to_delcdelw(deltas[i], prev_activations[j]);
         }
     }
 
     for i in 0..layer.biases.len() { // for every neuron
-        layer.biases[i] -= learning_rate * err_to_delcdelb(&deltas[i]);
+        layer.biases[i] -= learning_rate * err_to_delcdelb(deltas[i]);
     }
 }
 
