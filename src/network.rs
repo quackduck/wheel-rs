@@ -1,4 +1,5 @@
 use rand_distr::{num_traits::Float, Distribution, Normal};
+use std::cell::Cell;
 
 #[derive(Debug)]
 #[derive(Clone)]
@@ -12,8 +13,8 @@ pub struct Layer {
 pub fn new_layer(weights: Vec<Vec<f64>>, biases: Vec<f64>) -> Layer {
     let activations = vec![0.0; biases.len()];
     let zs = vec![0.0; biases.len()];
-    dbg!(activations.len());
-    dbg!(weights.len());
+    // dbg!(activations.len());
+    // dbg!(weights.len());
     Layer {
         weights,
         biases,
@@ -127,7 +128,7 @@ impl Network {
         for i in 0..last_layer.activations.len() {
             deltas[i] = 2.0 * cost_prime(last_layer.activations[i] - wanted[i]) * activate_prime(last_layer.zs[i]);
         }
-        let second_last_activs = rest.last_mut().unwrap().activations.clone();
+        let second_last_activs = &rest.last_mut().unwrap().activations;
         update_layer_with_deltas(&mut last_layer, &second_last_activs, &deltas, rate);
 
         for i in (1..rest.len()).rev() { // we already handled the last one, and no need to update the input layer
@@ -142,22 +143,14 @@ impl Network {
                 }
                 next_deltas[j] = sum * activate_prime(layer.zs[j]);
             }
-            let prev_activs = self.layers[i - 1].activations.clone();
-            // dbg!(i);
-            update_layer_with_deltas(&mut self.layers[i], &prev_activs, &next_deltas, rate);
+
+            // let prev_activs = self.layers[i - 1].activations.clone();
+            let (before, this) = self.layers.split_at_mut(i);
+            update_layer_with_deltas(&mut this[0], &before.last().unwrap().activations, &next_deltas, rate);
             deltas = next_deltas;
         }
     }
 }
-
-// // sum1d adds two 1d vecs together and stores the result in the first vec
-// fn sum1d(a: &mut Vec<f64>, b: Vec<f64>) {
-//     a.iter_mut().zip(b.iter()).for_each(|(ai, bi)| *ai += bi);
-// }
-
-// fn scalar_mul(a: &mut Vec<f64>, b: f64) {
-//     a.iter_mut().for_each(|ai| *ai *= b);
-// }
 
 fn err_to_delcdelw(delta: f64, prevactiv: f64) -> f64 {
     delta * prevactiv
@@ -178,4 +171,19 @@ fn update_layer_with_deltas(layer: &mut Layer, prev_activations: &Vec<f64>, delt
         layer.biases[i] -= learning_rate * err_to_delcdelb(deltas[i]);
     }
 }
+
+// fn update_layer_with_deltas2(layers: &mut Vec<Layer>, index: usize, deltas: &Vec<f64>, learning_rate: f64) {
+//     let (layer, rest) = layers.split_at_mut(index);
+//     let layer = layer.last_mut().unwrap();
+//     let prev_activations = &rest.last().unwrap().activations;
+//     for i in 0..layer.weights.len() { // for every neuron
+//         for j in 0..layer.weights[i].len() { // for every weight in the neuron
+//             layer.weights[i][j] -= learning_rate * err_to_delcdelw(deltas[i], prev_activations[j]);
+//         }
+//     }
+
+//     for i in 0..layer.biases.len() { // for every neuron
+//         layer.biases[i] -= learning_rate * err_to_delcdelb(deltas[i]);
+//     }
+// }
 

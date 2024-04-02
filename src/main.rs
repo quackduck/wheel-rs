@@ -11,18 +11,18 @@ fn main() {
     let mut n = new_network(vec![784, 64, 64, 10]);
     
     let m = new_mnist();
-
+    
     // start timer
     let now = Instant::now();
-    let samples = mnist_task(&m, 0); // returns all train data
 
-    for i in 0..100+1 {
+    for i in 0..15+1 {
+        let samples = mnist_task(&m, 0); // returns all train data
         // if i % 60 == 0 {
         println!("Epoch: {}", i);
         mnist_test(&m, &mut n);
         // }
         
-        dbg!(samples.len());
+        // dbg!(samples.len());
         for (x, y) in &samples {
             n.forward(x.to_vec());
             n.backward(y.to_vec())

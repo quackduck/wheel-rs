@@ -1,6 +1,7 @@
 use mnist::*;
 use crate::network::*;
 use rand::Rng;
+use rand::prelude::SliceRandom;
 
 pub struct Mnist {
     trn_img: Vec<Vec<u8>>,
@@ -18,8 +19,8 @@ pub fn new_mnist() -> Mnist {
         .test_set_length(10_000)
         .finalize();
     let mut new_trn_img = Vec::with_capacity(m.trn_lbl.len());
-    dbg!(m.trn_img.len());
-    dbg!(m.trn_lbl.len());
+    // dbg!(m.trn_img.len());
+    // dbg!(m.trn_lbl.len());
     // correct the shape of the data
     for i in 0..m.trn_lbl.len() {
         let mut img = Vec::with_capacity(28 * 28);
@@ -55,6 +56,7 @@ pub fn mnist_task(mnist: &Mnist, iteration: usize) -> Vec<(Vec<f64>, Vec<f64>)> 
         lbl_vec[*lbl as usize] = 1.0;
         samples.push((img, lbl_vec));
     }
+    samples.shuffle(&mut rand::thread_rng());
     samples
 }
 
