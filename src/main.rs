@@ -8,7 +8,7 @@ mod network;
 mod mnist;
 
 fn main() {
-    let mut n = new_network(vec![784, 64, 64, 10]);
+    let mut n = new_network(vec![784, 64, 64, 64, 10]);
     
     let m = new_mnist();
     
@@ -28,12 +28,14 @@ fn main() {
             n.backward(y.to_vec())
         }
     }
+    println!("Final test");
+    mnist_test(&m, &mut n);
     println!("Time elapsed: {:?}", now.elapsed());
 }
 
 fn simple_task() -> Vec<(Vec<f64>, Vec<f64>)> {
     let mut samples = Vec::with_capacity(300);
-    for i in 0..100 {
+    for _ in 0..100 {
         samples.push((vec![0.0], vec![1.0]));
         samples.push((vec![-1.0], vec![-1.0]));
         samples.push((vec![1.0], vec![0.0]));

@@ -1,6 +1,6 @@
 use mnist::*;
 use crate::network::*;
-use rand::Rng;
+
 use rand::prelude::SliceRandom;
 
 pub struct Mnist {
@@ -43,7 +43,7 @@ pub fn new_mnist() -> Mnist {
     }
 }
 
-pub fn mnist_task(mnist: &Mnist, iteration: usize) -> Vec<(Vec<f64>, Vec<f64>)> {
+pub fn mnist_task(mnist: &Mnist, _: usize) -> Vec<(Vec<f64>, Vec<f64>)> {
     let batch = 60000;
     let mut samples = Vec::with_capacity(batch);
     // let skipby = (batch * iteration) % (mnist.trn_lbl.len() - batch);
@@ -52,8 +52,8 @@ pub fn mnist_task(mnist: &Mnist, iteration: usize) -> Vec<(Vec<f64>, Vec<f64>)> 
         let img = &mnist.trn_img[i];
         let lbl = &mnist.trn_lbl[i];
         let img = img.iter().map(|x| *x as f64 / 255.0).collect();
-        let mut lbl_vec = vec![-1.0; 10];
-        lbl_vec[*lbl as usize] = 1.0;
+        let mut lbl_vec = vec![-0.9; 10];
+        lbl_vec[*lbl as usize] = 0.9;
         samples.push((img, lbl_vec));
     }
     samples.shuffle(&mut rand::thread_rng());

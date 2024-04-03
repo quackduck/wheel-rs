@@ -1,5 +1,5 @@
 use rand_distr::{num_traits::Float, Distribution, Normal};
-use std::cell::Cell;
+
 
 #[derive(Debug)]
 #[derive(Clone)]
@@ -61,7 +61,7 @@ fn activate(x: f64) -> f64 {
 
 fn activate_prime(x: f64) -> f64 {
     let a = activate(x);
-    1.0 - a * a
+    1.0 - a * a // + 0.1 // add a small value to make derivatives not too small
 }
 
 fn cost(err: f64) -> f64 {
@@ -69,7 +69,9 @@ fn cost(err: f64) -> f64 {
 }
 
 fn cost_prime(err: f64) -> f64 {
-    2.0 * err
+    // 2.0 * err.powi(3)
+    // 2.0 * err
+    err
 }
 
 impl Layer {
@@ -86,6 +88,8 @@ impl Layer {
 #[derive(Clone)]
 pub struct Network {
     layers: Vec<Layer>,
+    all_last_weight_updates: Vec<Vec<Vec<f64>>>, // for each layer, for each neuron, for each weight
+    all_last_bias_updates: Vec<Vec<f64>>, // for each layer, for each neuron
     // cost: f64,
 }
 
@@ -95,8 +99,21 @@ pub fn new_network(sizes: Vec<usize>) -> Network {
     for i in 0..sizes.len() - 1 {
         layers.push(new_random_layer(sizes[i], sizes[i + 1]));
     }
+    let mut all_last_weight_updates = Vec::with_capacity(layers.len());
+    let mut all_last_bias_updates = Vec::with_capacity(layers.len());
+    for i in 0..layers.len() {
+        let layer = &layers[i];
+        let mut lastWeightUpdates = Vec::with_capacity(layer.weights.len());
+        for j in 0..layer.weights.len() {
+            lastWeightUpdates.push(vec![0.0; layer.weights[j].len()]);
+        }
+        all_last_weight_updates.push(lastWeightUpdates);
+        all_last_bias_updates.push(vec![0.0; layer.biases.len()]);
+    }
     Network {
         layers,
+        all_last_weight_updates,
+        all_last_bias_updates,
         // cost: 0.0,
     }
 }
@@ -117,7 +134,7 @@ impl Network {
 
         // dbg!(&self.layers);
 
-        let (mut last_layer, mut rest) = self.layers.split_last_mut().unwrap();
+        let (mut last_layer, rest) = self.layers.split_last_mut().unwrap();
         // last_layer.activations.iter().zip(wanted.iter()).for_each(|(a, w)| {
         //     self.cost += cost(a-w);
         // });
@@ -129,7 +146,9 @@ impl Network {
             deltas[i] = 2.0 * cost_prime(last_layer.activations[i] - wanted[i]) * activate_prime(last_layer.zs[i]);
         }
         let second_last_activs = &rest.last_mut().unwrap().activations;
-        update_layer_with_deltas(&mut last_layer, &second_last_activs, &deltas, rate);
+        update_layer_with_deltas(&mut last_layer, &second_last_activs, &deltas, rate, 
+            &mut self.all_last_weight_updates.last_mut().unwrap(), &mut self.all_last_bias_updates.last_mut().unwrap());
+        // update_layer_with_deltas(&mut last_layer, &second_last_activs, &deltas, rate);
 
         for i in (1..rest.len()).rev() { // we already handled the last one, and no need to update the input layer
             
@@ -146,7 +165,9 @@ impl Network {
 
             // let prev_activs = self.layers[i - 1].activations.clone();
             let (before, this) = self.layers.split_at_mut(i);
-            update_layer_with_deltas(&mut this[0], &before.last().unwrap().activations, &next_deltas, rate);
+            // update_layer_with_deltas(&mut this[0], &before.last().unwrap().activations, &next_deltas, rate);
+            update_layer_with_deltas(&mut this[0], &before.last().unwrap().activations, &next_deltas, rate, 
+                &mut self.all_last_weight_updates[i], &mut self.all_last_bias_updates[i]);
             deltas = next_deltas;
         }
     }
@@ -160,30 +181,22 @@ fn err_to_delcdelb(delta: f64) -> f64 {
     delta
 }
 
-fn update_layer_with_deltas(layer: &mut Layer, prev_activations: &Vec<f64>, deltas: &Vec<f64>, learning_rate: f64) {
+fn update_layer_with_deltas(layer: &mut Layer, prev_activations: &Vec<f64>, deltas: &Vec<f64>, learning_rate: f64, 
+    weight_updates: &mut Vec<Vec<f64>>, bias_updates: &mut Vec<f64>) {
+
+    let momentum = 0.5;
+
     for i in 0..layer.weights.len() { // for every neuron
         for j in 0..layer.weights[i].len() { // for every weight in the neuron
-            layer.weights[i][j] -= learning_rate * err_to_delcdelw(deltas[i], prev_activations[j]);
+            weight_updates[i][j] = (learning_rate * err_to_delcdelw(deltas[i], prev_activations[j]) +
+                momentum * weight_updates[i][j]); // /(1.0 + momentum);
+            layer.weights[i][j] -= weight_updates[i][j];
         }
     }
 
     for i in 0..layer.biases.len() { // for every neuron
-        layer.biases[i] -= learning_rate * err_to_delcdelb(deltas[i]);
+        bias_updates[i] = (learning_rate * err_to_delcdelb(deltas[i]) +
+            momentum * bias_updates[i]); // / (1.0 + momentum);
+        layer.biases[i] -= bias_updates[i];
     }
 }
-
-// fn update_layer_with_deltas2(layers: &mut Vec<Layer>, index: usize, deltas: &Vec<f64>, learning_rate: f64) {
-//     let (layer, rest) = layers.split_at_mut(index);
-//     let layer = layer.last_mut().unwrap();
-//     let prev_activations = &rest.last().unwrap().activations;
-//     for i in 0..layer.weights.len() { // for every neuron
-//         for j in 0..layer.weights[i].len() { // for every weight in the neuron
-//             layer.weights[i][j] -= learning_rate * err_to_delcdelw(deltas[i], prev_activations[j]);
-//         }
-//     }
-
-//     for i in 0..layer.biases.len() { // for every neuron
-//         layer.biases[i] -= learning_rate * err_to_delcdelb(deltas[i]);
-//     }
-// }
-
