@@ -19,6 +19,7 @@ fn main() {
         let samples = mnist_task(&m, 0); // returns all train data
         // if i % 60 == 0 {
         println!("Epoch: {}", i);
+        print_network_stats(&n);
         mnist_test(&m, &mut n);
         // }
         
@@ -69,3 +70,5 @@ fn test_network(n: &mut Network) {
         println!("{} -> {:?}", i, n.forward(vec![i]));
     }
 }
+
+

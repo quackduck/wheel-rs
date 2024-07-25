@@ -30,14 +30,47 @@ pub fn new_random_layer(input_size: usize, this_size: usize) -> Layer {
 }
 
 fn random_biases(n: usize) -> Vec<f64> {
-    let mut rng = rand::thread_rng();
-    let variance = 1.0 / n as f64;
-    let normal = Normal::new(0.0, variance.sqrt()).unwrap();
-    let mut biases = Vec::with_capacity(n);
-    for _ in 0..n {
-        biases.push(normal.sample(&mut rng));
+    vec![0.0; n]
+    // vec![-0.24; n]
+    // let mut rng = rand::thread_rng();
+    // let variance = 1.0 / n as f64;
+    // let normal = Normal::new(0.0, variance.sqrt()).unwrap();
+    // let mut biases = Vec::with_capacity(n);
+    // for _ in 0..n {
+    //     biases.push(normal.sample(&mut rng));
+    // }
+    // biases
+}
+
+pub fn print_network_stats(n: &Network) {
+    for (i, l) in n.layers.iter().enumerate() {
+        if i == 0 {
+            continue;
+        }
+        let weights = flatten(&l.weights);
+        let biases = &l.biases;
+        println!("layer {} ", i);
+        print!("    weights: ");
+        print_stats(&weights);
+        print!("    biases: ");
+        print_stats(biases);
     }
-    biases
+}
+
+fn flatten(v: &Vec<Vec<f64>>) -> Vec<f64> {
+    let mut res = Vec::new();
+    for row in v {
+        res.extend(row);
+    }
+    res
+}
+
+fn print_stats(v: &Vec<f64>) {
+    let min = v.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+    let max = v.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+    let sum = v.iter().sum::<f64>();
+    let avg = sum / v.len() as f64;
+    println!("min: {:.2}, max: {:.2}, avg: {:.2}", min, max, avg);
 }
 
 fn random_weights(input_size: usize, this_size: usize) -> Vec<Vec<f64>> {
